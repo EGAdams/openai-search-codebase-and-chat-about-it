@@ -9,8 +9,8 @@ import openai
 from tree_sitter import Language, Parser
 
 RESULTS_CHAT_WITH = 200
-MAX_TOKENS = 6500  # 8191
-MAX_COMBINED_RESULTS_LENGTH = 6000
+MAX_TOKENS = 15000 # 6500  # 8191
+MAX_COMBINED_RESULTS_LENGTH = 15000 # 6000
 CACHED_EMBEDDINGS_PATH = "code_search_openai.json"
 
 
@@ -21,13 +21,16 @@ def num_tokens_from_string(string: str, encoding_name: str) -> int:
     return num_tokens
 
 
-GO_LANGUAGE = (Language('build/my-languages.so', 'go'), "*.go")
-JS_LANGUAGE = (Language('build/my-languages.so', 'javascript'), "*.go")
-PY_LANGUAGE = (Language('build/my-languages.so', 'python'), "*.py")
+# GO_LANGUAGE = (Language('build/my-languages.so', 'go'), "*.go")
+# JS_LANGUAGE = (Language('build/my-languages.so', 'javascript'), "*.js")
+# PY_LANGUAGE = (Language('build/my-languages.so', 'python'), "*.py")
+SWIFT_LANGUAGE = (Language('build/my-languages.so', 'swift'), "*.swift")
+JAVA_LANGUAGE  = (Language('build/my-languages.so', 'java'), "*.java")
 
-current_language = GO_LANGUAGE
+current_language = JAVA_LANGUAGE
 
-openai.api_key = os.environ['OPENAI_API_KEY']
+# openai.api_key = os.environ['OPENAI_API_KEY']
+openai.api_key = "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"
 
 # path to code directory to search/embed/query
 code_root = None
@@ -67,7 +70,8 @@ def get_functions(filepath):
               " - ", cursor.node.end_byte)
         code = codestr[cursor.node.start_byte:cursor.node.end_byte]
         node_type = cursor.node.type
-        print("code:\n", code)
+        #print("code:\n", code)
+        print( "not printing code.")
         code_filename = {
             "code": code, "node_type": node_type, "filepath": filepath}
         if code.strip() != "":
@@ -100,9 +104,10 @@ else:
     print("Total number of functions extracted:", node_count)
 
     df = pd.DataFrame(all_nodes)
+    print( "getting embeddings... " )
     df['code_embedding'] = df['code'].apply(
         lambda x: get_embedding(x, engine='text-embedding-ada-002'))
-    print("Done creating embeddings")
+    print("done creating embeddings.")
     df['filepath'] = df['filepath'].apply(lambda x: x.replace(code_root, ""))
     df.to_json(CACHED_EMBEDDINGS_PATH)
 
@@ -143,16 +148,19 @@ def search_functions(df, number_similar_results=200, n_lines=1000):
 
 
 print("Running search functions to find similar code")
+
 related_code = search_functions(df, number_similar_results=RESULTS_CHAT_WITH)
+print(related_code)
 header = """Answer the question using the provided context and any other available information."\n\nContext:\n"""
 final_prompt = header + \
     "".join(related_code) + "\n\n Q: " + code_query + "\n A:"
 
+print ( "creating final answer..." )
 final_answer = openai.ChatCompletion.create(
     messages=[{"role": "user", "content": final_prompt}],
-    model="gpt-3.5-turbo"
+    model="gpt-3.5-turbo"   # model="gpt-4-32k-0613"
 )
-
+ 
 print('-'*70)
 print('-'*70)
 print("\n\n\nChatGPT says:\n\n", final_answer.choices[0].message.content)
