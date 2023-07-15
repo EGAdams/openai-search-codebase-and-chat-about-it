@@ -1,3 +1,8 @@
 parse_and_embed/.env
 parse_and_embed/playground_data/tennis-game/
 playground_data/tennis-game/
+parse_and_embed/tennis-game/
+parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp
+parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h
+parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp
+parse_and_embed/tennis-game/SetDrawer/SetDrawer.h
