@@ -30,9 +30,9 @@ embeddings.compute_repository_embeddings()
 # Generate or load all embeddings
 print("Generated or loaded all embeddings")
 
-query_embedding = embeddings.get_embedding(code_query, 'text-embedding-ada-002')
+query_embedding = embeddings.get_embedding( code_query, 'text-embedding-ada-002' )
 if not query_embedding:
-    print("Error: query embedding is empty")
+    print( "Error: query embedding is empty ")
     sys.exit( 1 )
 
 # Define the search function using the Embeddings class
@@ -69,7 +69,8 @@ related_code = search_functions(embeddings.df, number_similar_results=200) # rel
 header = """Answer the question using the provided context and any other available information."\n\nContext:\n"""
 final_prompt = header + \
     "".join(related_code) + "\n\n Q: " + code_query + "\n A:"
-
+print ( "final_prompt:" )
+print ( final_prompt )
 print ( "creating final answer..." )
 final_answer = openai.ChatCompletion.create(
     messages=[{"role": "user", "content": final_prompt}],

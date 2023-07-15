@@ -43,42 +43,43 @@ class CodeEmbeddings:
         except Exception as e:
             print(f"Error: {str(e)}")
 
-        info = self.extract_info( REPOSITORY_PATH )
+        info = self.extract_info( self.workspace_path + "/" + REPOSITORY_PATH )
         self.save_info_to_csv(info)
 
-        df = pd.read_csv(os.path.join(self.workspace_path, 'playground_data\\repository_info.csv'))
+        df = pd.read_csv(os.path.join(self.workspace_path, 'playground_data/repository_info.csv'))
         df = df.set_index(["filePath", "lineCoverage"])
         self.df = df
         context_embeddings = self.compute_doc_embeddings(df)
-        self.save_doc_embeddings_to_csv(context_embeddings, df, os.path.join(self.workspace_path, 'playground_data\\doc_embeddings.csv'))
+        self.save_doc_embeddings_to_csv(context_embeddings, df, os.path.join(self.workspace_path, 'playground_data/doc_embeddings.csv'))
 
         try:
-            self.document_embeddings = self.load_embeddings(os.path.join(self.workspace_path, 'playground_data\\doc_embeddings.csv'))
+            self.document_embeddings = self.load_embeddings(os.path.join(self.workspace_path, 'playground_data/doc_embeddings.csv'))
         except:
             pass
 
-    def extract_info( self, REPOSITORY_PATH ):
-        info = []
+    def extract_info(self, directory_path):
+        cpp_files = [os.path.join(root, name)
+                    for root, dirs, files in os.walk(directory_path)
+                    for name in files
+                    if name.endswith((".hpp", ".cpp")) and not "googletest" in root]
 
-        for root, dirs, files in os.walk( REPOSITORY_PATH ):
-            for file in files:
-                file_path = os.path.join(root, file)
-                # continue if file_path contains "google_test"
-                # If the file is a C++ source or header file and not in googletest path...
-                if file_path.endswith(('.cpp', '.h')) and "googletest" not in file_path:  
-                    nodes = self.parser.parse_file(file_path)  # Parse the file using CodeParser
-                    
-                    # Add the parsed nodes to the info list
-                    for node in nodes:
-                        info.append((file_path, node[0], node[1]))
-                else:
-                    print ( "skipping path: " + file_path + " ..." )
-        return info
+        parsed_nodes = []
+        for cpp_file in cpp_files:
+            parsed_nodes.extend(self.parser.parse_file(cpp_file))
+
+        return [(file_path, str(line_coverage), self._extract_node_content(node)) for file_path, line_coverage, node in parsed_nodes]
+
+    def _extract_node_content(self, node):
+        if isinstance(node, str):
+            return node
+        else:
+            return ''.join(self._extract_node_content(child) for child in node.children)
+
 
     def save_info_to_csv(self, info):
         count = 0
         os.makedirs(os.path.join(self.workspace_path, "playground_data"), exist_ok=True)
-        with open(os.path.join(self.workspace_path, 'playground_data\\repository_info.csv'), "w", newline="") as csvfile:
+        with open(os.path.join(self.workspace_path, 'playground_data/repository_info.csv'), "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["filePath", "lineCoverage", "content"])
             for file_path, line_coverage, content in info:

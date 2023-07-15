@@ -1,0 +1,348 @@
+adamsl@DESKTOP-3U1EV9F:~/openai-search-codebase-and-chat-about-it/parse_and_embed$ python3 no_token_limit_chat.py
+
+Parsing file: ./tennis-game/SetDrawer/SetDrawer.h
+Extracted class node from line 18 to 29:
+class SetDrawer {
+ public:
+    SetDrawer( RGBMatrix* canvas, GameState* gameState );
+    ~SetDrawer();
+    void drawSets();
+    void drawTextOnCanvas( int x, int y, const Color& color, const std::string& text );
+
+ private:
+    rgb_matrix::Font    _little_font;
+    RGBMatrix*          _canvas;
+    GameState*          _gameState;
+    SetHistoryText      _setHistoryText; }
+Finished parsing file: ./tennis-game/SetDrawer/SetDrawer.h
+parsing path: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp...
+
+Parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp
+Extracted function node from line 3 to 54:
+ScoreBoard::ScoreBoard( Player* player1, Player* player2, GameState* gameState ):
+    _player1( player1 ), _player2( player2 ), _gameState( gameState ) {
+    printf( "Constructing ScoreBoard...\n" );
+    Color pipe_color( 255, 255, 0 ); // yellow
+    Color background_color( 0, 0, 0 );
+    Color big_number_color( 0, 255, 0 ); // green
+    Color outline_color( 0, 0, 0 );
+    RGBMatrix::Options matrix_options; // seems like the only logical place to create the canvas
+    matrix_options.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
+    matrix_options.pixel_mapper_config = "Rotate:180;264-Mapper"; // or e.g. "U-mapper"
+    matrix_options.rows = 64;
+    matrix_options.cols = 64;
+    matrix_options.chain_length = 1;
+    matrix_options.parallel = 2;
+    matrix_options.show_refresh_rate = false;
+    matrix_options.disable_hardware_pulsing = true; // --led-no-hardware-pulse
+    matrix_options.brightness = 35; // 35 is best for demo videos in largo
+    matrix_options.pwm_bits = 11;
+    matrix_options.multiplexing = 1;
+    rgb_matrix::RuntimeOptions runtime_opt;
+    runtime_opt.drop_privileges = 0;
+    runtime_opt.gpio_slowdown = 2;
+    runtime_opt.daemon = 0;
+    runtime_opt.do_gpio_init = 1;
+    printf( "Matrix options:\n" );
+    printf( "  rows: %d\n", matrix_options.rows );
+    printf( "  chain_length: %d\n", matrix_options.chain_length );
+    printf( "  parallel: %d\n", matrix_options.parallel );
+    printf( "  pwm_bits: %d\n", matrix_options.pwm_bits );
+    printf( "  pwm_lsb_nanoseconds: %d\n", matrix_options.pwm_lsb_nanoseconds );
+    printf( "Runtime options:\n" );
+    printf( "  daemon: %d\n", runtime_opt.daemon );
+    printf( "  do_gpio_init: %d\n", runtime_opt.do_gpio_init );
+    printf( "  drop_privileges: %d\n", runtime_opt.drop_privileges );
+    printf( "  gpio_slowdown: %d\n", runtime_opt.gpio_slowdown );
+    CanvasCreator canvasCreator( matrix_options, runtime_opt );
+    _canvas = std::unique_ptr<rgb_matrix::RGBMatrix>( canvasCreator.createCanvas());
+    FontLoader fontLoader( "fonts/mspgothic_042623.bdf" ); // Load Fonts
+    rgb_matrix::Font font;
+    fontLoader.LoadFont( font );
+    FontLoader bigNumberFontLoader( "fonts/fgm_27_ee.bdf" );
+    rgb_matrix::Font bigNumberFont;
+    bigNumberFontLoader.LoadFont( bigNumberFont );
+    if (!_big_number_font.LoadFont( BIG_NUMBER_FONT )) {
+        fprintf( stderr, "Couldn't load font '%s'\n", BIG_NUMBER_FONT ); exit( 1 );}
+    Color color( 255, 255, 0 );
+    Color bg_color( 0, 0, 0 );
+    _bigNumberDrawer   = std::make_unique<NumberDrawer>( _canvas.get(), &_big_number_font, NumberDrawer::BIG, color, bg_color );
+    _smallNumberDrawer = std::make_unique<NumberDrawer>( _canvas.get(), &_big_number_font, NumberDrawer::BIG, color, bg_color );
+    _pipeDrawer        = std::make_unique<NumberDrawer>( _canvas.get(), &_big_number_font, NumberDrawer::BIG, color, bg_color );
+    _setDrawer         = std::make_unique<SetDrawer>(    _canvas.get(), _gameState                                            );
+    update(); }
+Extracted function node from line 56 to 58:
+ScoreBoard::~ScoreBoard() {
+    std::cout << "destroying ScoreBoard..." << std::endl;
+    delete _canvas.get(); }
+Extracted function node from line 60 to 60:
+void ScoreBoard::drawGames() {  std::cout << "inside ScoreBoard::drawGames()" << std::endl; }
+Extracted function node from line 62 to 64:
+bool ScoreBoard::hasCanvas() {
+    if ( _canvas != NULL ) { return true;
+    } else { std::cout << "*** WARNING: canvas is NULL ***" << std::endl; return false; }}
+Extracted function node from line 66 to 75:
+void ScoreBoard::update() {
+    std::cout << "inside ScoreBoard::update(), calling clearScreen()..." << std::endl;
+    clearScreen();
+    std::cout << "getting player points..." << std::endl;
+    std::cout << "player1 points: " << _player1->getPoints() << std::endl;
+    std::cout << "player2 points: " << _player2->getPoints() << std::endl;
+    std::cout << "inside ScoreBoard::update(), calling _drawPlayerScore..." << std::endl;
+    _drawPlayerScore( _player1 );
+    _drawPlayerScore( _player2 );
+    _setDrawer->drawSets(); }
+Extracted function node from line 77 to 87:
+void ScoreBoard::clearScreen() {
+    // std::cout << "inside ScoreBoard::clearScreen()" << std::endl;
+    // std::cout << "*** the clear screen delay... ***" << std::endl;
+    // GameTimer::gameDelay( 500 );
+    // std::cout << "*** done with the clear screen delay... ***" << std::endl;
+    // GameTimer::gameDelay( 500 );
+
+    // if _canvas is null, exit
+    if ( !hasCanvas()) { std::cout << "*** ERROR: canvas == NULL.  exiting... ***" << std::endl; exit( 1 ); }
+    Color flood_color( 0, 0, 0 ); _canvas->Fill( flood_color.r, flood_color.g, flood_color.b );
+    std::cout << "screen cleared." << std::endl; }
+Extracted function node from line 89 to 98:
+void ScoreBoard::_drawPlayerScore(Player* player) {
+    int vertical_offset = player->number() == 0 ? 0 : _big_number_font.height();
+    std::string serve_bar = _gameState->getServe() == player->number() ? "I" : " "; // or use p1sv and swap
+    _pipeDrawer->DrawNumber(serve_bar, 1, _big_number_font.baseline() + vertical_offset );
+    std::string score = _translate(player->getPoints());
+    int baseline = _big_number_font.baseline();
+    int first_offset  = _characterOffset( score.substr( 0, 1 ));
+    int second_offset = _characterOffset( score.substr( 1, 1 ));
+    _bigNumberDrawer->DrawNumber( score.substr( 0, 1 ), first_offset  + 16, baseline + vertical_offset );
+    _bigNumberDrawer->DrawNumber( score.substr( 1, 1 ), second_offset + 38, baseline + vertical_offset ); }
+Extracted function node from line 100 to 101:
+void ScoreBoard::_drawPlayerSets( Player* player ) {
+    std::cout << "inside ScoreBoard::_drawPlayerSets()" << std::endl; }
+Extracted function node from line 103 to 115:
+int ScoreBoard::_characterOffset( std::string character ) {
+    int char_offset = 0;
+    if ( character == "A" ) {
+        return -4;
+    } else if ( character == "d" ) {
+        return 0;
+    } else { char_offset = std::stoi( character ); }
+
+    switch ( char_offset ) {
+    case 3: return -1;
+    case 4: return -4;
+    case 5: return -1;
+    default: return 0; }}
+Extracted function node from line 117 to 126:
+std::string ScoreBoard::_translate( int raw_score ) {
+    switch ( raw_score ) {
+    case 0: return "00";
+    case 1: return "15";
+    case 2: return "30";
+    case 3: return "40";
+    case 4: return "Ad";
+    case 5: return "Ad";
+    case 99: return "Ad";
+    default: return "00"; }}
+Finished parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp
+parsing path: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h...
+
+Parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h
+Extracted class node from line 20 to 43:
+class ScoreBoard {
+public:
+    ScoreBoard( Player* player1, Player* player2, GameState* gameState );
+    ~ScoreBoard();
+    void update();
+    bool hasCanvas();
+    void clearScreen();
+    void drawGames();
+
+private:
+    Player*          _player1;
+    Player*          _player2;
+    GameState*       _gameState;
+    rgb_matrix::Font _big_number_font;
+    std::unique_ptr<NumberDrawer>    _smallNumberDrawer;
+    std::unique_ptr<NumberDrawer>    _bigNumberDrawer;
+    std::unique_ptr<NumberDrawer>    _pipeDrawer;
+    std::unique_ptr<SetDrawer>       _setDrawer;
+    std::unique_ptr<RGBMatrix>       _canvas;
+
+    void _drawPlayerScore(  Player* player        );
+    void _drawPlayerSets(   Player* player        );
+    int  _characterOffset(  std::string character );
+    std::string _translate( int raw_score         ); }
+Finished parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h
+parsing path: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp...
+
+Parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp
+Extracted function node from line 3 to 9:
+SetDrawer::SetDrawer( RGBMatrix* canvas, GameState* gameState ) :
+    _canvas( canvas ), _gameState( gameState ), _setHistoryText( gameState ) {
+    FontLoader smallNumberFontLoader( LITTLE_FONT );
+    rgb_matrix::Font smallNumberFont;
+    smallNumberFontLoader.LoadFont( smallNumberFont );
+    if ( !_little_font.LoadFont( LITTLE_FONT )) {
+        fprintf( stderr, "Couldn't load font '%s'\n", LITTLE_FONT ); exit( 1 ); }}
+Extracted function node from line 11 to 11:
+SetDrawer::~SetDrawer() { std::cout << "destructing SetDrawer..." << std::endl; }
+Extracted function node from line 13 to 18:
+void SetDrawer::drawTextOnCanvas( int x, int y, const Color& color, const std::string& text ) {
+    Color background_color( 0, 0, 0 );
+    int letter_spacing = 0;
+    rgb_matrix::Font* outline_font = NULL;
+    rgb_matrix::DrawText( _canvas, _little_font, x, y + _little_font.baseline(), color, outline_font ?
+                          NULL : &background_color, text.c_str(), letter_spacing ); }
+Extracted function node from line 20 to 32:
+void SetDrawer::drawSets() {
+    int y = START_ROW;
+    int x = 0;
+    std::cout << "*** inside SetDrawer drawing sets..." << std::endl;
+    std::string playerOneSetString = _setHistoryText.getSetHistoryText( PLAYER_ONE );
+    std::string playerTwoSetString = _setHistoryText.getSetHistoryText( PLAYER_TWO );
+    std::cout << "playerOneSetString: " << playerOneSetString << std::endl;
+    std::cout << "playerTwoSetString: " << playerTwoSetString << std::endl;
+    Color thirdRowColor( 0, 255, 0 );
+    drawTextOnCanvas( x + SMALL_BEFORE, y, thirdRowColor, playerOneSetString );
+    y += _little_font.height() - 5;
+    Color fourthRowColor( 255, 0, 0 );
+    drawTextOnCanvas( x + SMALL_BEFORE, y, fourthRowColor, playerTwoSetString ); }
+Finished parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp
+parsing path: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h...
+
+Parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h
+Extracted class node from line 18 to 29:
+class SetDrawer {
+ public:
+    SetDrawer( RGBMatrix* canvas, GameState* gameState );
+    ~SetDrawer();
+    void drawSets();
+    void drawTextOnCanvas( int x, int y, const Color& color, const std::string& text );
+
+ private:
+    rgb_matrix::Font    _little_font;
+    RGBMatrix*          _canvas;
+    GameState*          _gameState;
+    SetHistoryText      _setHistoryText; }
+Finished parsing file: /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h
+
+content    (3, 54)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (56, 58)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (60, 60)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (62, 64)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (66, 75)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (77, 87)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (89, 98)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (100, 101)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (103, 115)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (117, 126)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp), dtype: object
+content    (20, 43)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h), dtype: object
+content    (3, 9)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp), dtype: object
+content    (11, 11)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp), dtype: object
+content    (13, 18)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp), dtype: object
+content    (20, 32)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp), dtype: object
+content    (18, 29)
+Name: (/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h, /home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h), dtype: object
+
+Generated or loaded all embeddings
+Running search functions to find similar code
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(3, 54)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(56, 58)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(60, 60)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(62, 64)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(66, 75)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(77, 87)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(89, 98)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(100, 101)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(103, 115)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.cpp  score=nan
+(117, 126)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/ScoreBoard/ScoreBoard.h  score=nan
+(20, 43)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp  score=nan
+(3, 9)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp  score=nan
+(11, 11)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp  score=nan
+(13, 18)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.cpp  score=nan
+(20, 32)
+----------------------------------------------------------------------
+/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h:/home/adamsl/openai-search-codebase-and-chat-about-it/parse_and_embed/tennis-game/SetDrawer/SetDrawer.h  score=nan
+(18, 29)
+----------------------------------------------------------------------
+
+**************************************************************
+
+Best ranking code snippet:
+(3, 54)
+final_prompt:
+Answer the question using the provided context and any other available information."
+
+Context:
+(3, 54)
+(56, 58)
+(60, 60)
+(62, 64)
+(66, 75)
+(77, 87)
+(89, 98)
+(100, 101)
+(103, 115)
+(117, 126)
+(20, 43)
+(3, 9)
+(11, 11)
+(13, 18)
+(20, 32)
+(18, 29)
+
+ Q: Please explain in great detail what the ScoreBoard and SetDrawer objects do.
+ A:
+creating final answer...
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+
+
+ChatGPT says:
+
+ Based on the provided context, there is no specific information about the ScoreBoard or SetDrawer objects. Without further information, it is not possible to explain in detail what these objects do.
